@@ -43,6 +43,32 @@ kube::bootstrap::bootstrap_daemon() {
   done
 }
 
+kube::bootstrap::restart_docker_openrc(){
+  kube::log::status "Restarting main docker daemon, openrc..."
+  #DOCKER_CONF="/etc/default/docker"
+  DOCKER_CONF="/etc/conf.d/docker"
+    kube::helpers::backup_file ${DOCKER_CONF}
+        
+    # Is there an uncommented DOCKER_OPTS line at all?
+    L=$(grep "DOCKER_OPTS" $DOCKER_CONF | grep -v "#" | wc -l)
+    echo "L"
+    echo $L
+    if [ $L -eq 0 ]; then
+      echo "grep found..."
+      echo "DOCKER_OPTS=\"--mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET} \"" >> ${DOCKER_CONF}
+    else
+      echo "else, replace_mtu_bip"
+      kube::helpers::replace_mtu_bip ${DOCKER_CONF} "DOCKER_OPTS"
+    fi
+
+    service docker stop
+    while [[ $(ps aux | grep $(which docker) | grep -v grep | wc -l) -gt 0 ]]; do
+      kube::log::status "Waiting for docker to terminate"
+      sleep 1
+    done
+    service docker start  
+}
+
 # Configure docker net settings, then restart it
 kube::bootstrap::restart_docker(){
 
@@ -110,16 +136,19 @@ kube::helpers::replace_mtu_bip(){
   local SEARCH_FOR=$2
 
   # Assuming is a $SEARCH_FOR statement already, and we should append the options if they do not exist
-  if [[ -z $(grep -- "--mtu=" $DOCKER_CONF) ]]; then
-    sed -e "s@$(grep "$SEARCH_FOR" $DOCKER_CONF)@$(grep "$SEARCH_FOR" $DOCKER_CONF) --mtu=${FLANNEL_MTU}@g" -i $DOCKER_CONF
-  fi
-  if [[ -z $(grep -- "--bip=" $DOCKER_CONF) ]]; then
-    sed -e "s@$(grep "$SEARCH_FOR" $DOCKER_CONF)@$(grep "$SEARCH_FOR" $DOCKER_CONF) --bip=${FLANNEL_SUBNET}@g" -i $DOCKER_CONF
-  fi
+#  if [[ -z $(grep -- "--mtu=" $DOCKER_CONF) ]]; then
+#    sed -e "s@$(grep "$SEARCH_FOR" $DOCKER_CONF)@$(grep "$SEARCH_FOR" $DOCKER_CONF) --mtu=${FLANNEL_MTU}@g" -i $DOCKER_CONF
+#  fi
+#  if [[ -z $(grep -- "--bip=" $DOCKER_CONF) ]]; then
+#    sed -e "s@$(grep "$SEARCH_FOR" $DOCKER_CONF)@$(grep "$SEARCH_FOR" $DOCKER_CONF) --bip=${FLANNEL_SUBNET}@g" -i $DOCKER_CONF
+#  fi
+
+  sed -e "s@$(grep "$SEARCH_FOR" $DOCKER_CONF)@$(grep "$SEARCH_FOR" $DOCKER_CONF) --mtu=${FLANNEL_MTU}@g" -i $DOCKER_CONF
+  sed -e "s@$(grep "$SEARCH_FOR" $DOCKER_CONF)@$(grep "$SEARCH_FOR" $DOCKER_CONF) --bip=${FLANNEL_SUBNET}@g" -i $DOCKER_CONF
 
   # Finds "--mtu=????" and replaces with "--mtu=${FLANNEL_MTU}"
   # Also finds "--bip=??.??.??.??" and replaces with "--bip=${FLANNEL_SUBNET}"
   # NOTE: This method replaces a whole 'mtu' or 'bip' expression. If it ends with a punctuation mark it will be truncated.
   # Please add additional space before the punctuation mark to prevent this. For example: "--mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET} ".
-  sed -e "s@$(grep -o -- "--mtu=[[:graph:]]*" $DOCKER_CONF)@--mtu=${FLANNEL_MTU}@g;s@$(grep -o -- "--bip=[[:graph:]]*" $DOCKER_CONF)@--bip=${FLANNEL_SUBNET}@g" -i $DOCKER_CONF
+  #sed -e "s@$(grep -o -- "--mtu=[[:graph:]]*" $DOCKER_CONF)@--mtu=${FLANNEL_MTU}@g;s@$(grep -o -- "--bip=[[:graph:]]*" $DOCKER_CONF)@--bip=${FLANNEL_SUBNET}@g" -i $DOCKER_CONF
 }

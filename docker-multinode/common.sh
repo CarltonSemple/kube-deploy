@@ -65,6 +65,7 @@ kube::multinode::main(){
 
   BOOTSTRAP_DOCKER_SOCK="unix:///var/run/docker-bootstrap.sock"
   BOOTSTRAP_DOCKER_PARAM="-H ${BOOTSTRAP_DOCKER_SOCK}"
+  #BOOTSTRAP_DOCKER_PARAM=""
   ETCD_NET_PARAM="--net host"
 
   if [[ ${USE_CONTAINERIZED} == "true" ]]; then

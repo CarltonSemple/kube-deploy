@@ -39,7 +39,7 @@ else
 
   kube::multinode::start_flannel
 
-  kube::bootstrap::restart_docker
+  kube::bootstrap::restart_docker_openrc
 fi
 
 kube::multinode::start_k8s_master

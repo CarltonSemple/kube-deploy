@@ -1,0 +1,3 @@
+DOCKER_OPTS="--mtu= --bip= "
+DOCKER_OPTS="--mtu=1472 --bip=10.1.2.1/24 "
+DOCKER_OPTS="--mtu=1472 --bip=10.1.2.1/24"
